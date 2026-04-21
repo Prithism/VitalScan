@@ -45,7 +45,12 @@ Thumbs.db
 
 # Production builds
 *.prod.js
-*.prod.css
+*..prod.css
+
+# Build configuration files
+postcss.config.js
+tailwind.config.js
+vite.config.js
 
 # Docker
 Dockerfile
