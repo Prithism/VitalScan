@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Iris, IrisResults } from '@mediapipe/iris';
 
 // MediaPipe Iris eye tracker for real-time scleral PPG
 // Optimized for browser performance with frame-to-frame tracking
@@ -32,15 +31,11 @@ export function useEyeTracker() {
   // Initialize MediaPipe Iris
   const initializeMediaPipe = useCallback(async () => {
     try {
-      mediaPipeRef.current = new Iris(Iris);
-      await mediaPipeRef.current.setOptions({
-        maxNumFaces: 1,
-        refineLandmarks: true,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7,
-      });
-      await mediaPipeRef.current.initialize();
-      return true;
+      // MediaPipe Iris is not available as npm package
+      // This would require loading from CDN or using a different approach
+      console.warn('MediaPipe Iris is not available as npm package');
+      setError('MediaPipe Iris is not available as npm package. Please use a different eye tracking approach.');
+      return false;
     } catch (err) {
       console.error('MediaPipe initialization error:', err);
       setError('Failed to initialize MediaPipe Iris: ' + err.message);
