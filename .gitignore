@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.cache/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Coverage
+coverage/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Production builds
+*.prod.js
+*.prod.css
+
+# Docker
+Dockerfile
+.docker/
+
+# Testing
+.nyc_output/
+.nyc_output.json
+
+# Public assets (uncomment if you don't want to track these)
+# public/
