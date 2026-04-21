@@ -2,16 +2,22 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 // Production-grade signal extractor for scleral PPG
 // Optimized for 60fps with rolling ring buffer and AC/DC decomposition
+// Uses Python backend for advanced signal processing (bandpass, motion artifact removal, Savitzky-Golay)
+
+const API_URL = 'http://localhost:8000';
 
 export function useSignalExtractor() {
   const [signalData, setSignalData] = useState(null);
   const [rawSignal, setRawSignal] = useState([]);
+  const [filteredSignal, setFilteredSignal] = useState([]);
+  const [comparisonPlot, setComparisonPlot] = useState(null);
   const [detrendedSignal, setDetrendedSignal] = useState([]);
   const [acComponent, setAcComponent] = useState([]);
   const [dcComponent, setDcComponent] = useState([]);
   const [signalQuality, setSignalQuality] = useState('none');
   const [signalStats, setSignalStats] = useState(null);
   const [processingState, setProcessingState] = useState('idle');
+  const [backendError, setBackendError] = useState(null);
 
   // Ring buffer configuration
   const samplingRateRef = useRef(60); // 60fps target
@@ -339,6 +345,41 @@ export function useSignalExtractor() {
     return { ac, dc };
   }, []);
 
+  // Process signal using Python backend for advanced filtering
+  const processSignalWithBackend = useCallback(async (signalBuffer) => {
+    try {
+      setProcessingState('processing');
+      setBackendError(null);
+
+      const response = await fetch(`${API_URL}/process-signal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          raw_signal: signalBuffer,
+          sample_rate: samplingRateRef.current,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setFilteredSignal(data.filtered_signal);
+      setComparisonPlot(data.raw_vs_filtered_b64);
+      
+      setProcessingState('idle');
+      return data;
+    } catch (error) {
+      console.error('Signal processing backend error:', error);
+      setBackendError(error.message);
+      setProcessingState('idle');
+      return null;
+    }
+  }, []);
+
   // Process signal for analysis
   const processSignal = useCallback(async () => {
     setProcessingState('processing');
@@ -363,6 +404,9 @@ export function useSignalExtractor() {
     // Calculate FFT for frequency analysis
     const fftResult = performFFT(detrended);
 
+    // Send to Python backend for advanced filtering
+    const backendResult = await processSignalWithBackend(buffer);
+
     setSignalStats({
       bufferLength: buffer.length,
       samplingRate: samplingRateRef.current,
@@ -370,13 +414,14 @@ export function useSignalExtractor() {
       acComponent: decomposition?.ac,
       dcComponent: decomposition?.dc,
       fft: fftResult,
+      backendResult: backendResult,
     });
 
     setSignalQuality('processed');
     setProcessingState('idle');
 
     return true;
-  }, [getBufferSnapshot, detrendSignal, decomposeSignal]);
+  }, [getBufferSnapshot, detrendSignal, decomposeSignal, processSignalWithBackend]);
 
   // Perform FFT analysis
   const performFFT = useCallback((signal) => {
@@ -501,13 +546,16 @@ export function useSignalExtractor() {
   const getSignalForAnalysis = useCallback(() => {
     return {
       raw: rawSignal,
+      filtered: filteredSignal,
+      comparisonPlot: comparisonPlot,
       detrended: detrendedSignal,
       ac: acComponent,
       dc: dcComponent,
       stats: signalStats,
       quality: signalQuality,
+      backendError: backendError,
     };
-  }, [rawSignal, detrendedSignal, acComponent, dcComponent, signalStats, signalQuality]);
+  }, [rawSignal, filteredSignal, comparisonPlot, detrendedSignal, acComponent, dcComponent, signalStats, signalQuality, backendError]);
 
   // Get buffer statistics
   const getBufferStats = useCallback(() => {
@@ -537,12 +585,15 @@ export function useSignalExtractor() {
     // State
     signalData,
     rawSignal,
+    filteredSignal,
+    comparisonPlot,
     detrendedSignal,
     acComponent,
     dcComponent,
     signalQuality,
     signalStats,
     processingState,
+    backendError,
     
     // Methods
     extractSignal,
